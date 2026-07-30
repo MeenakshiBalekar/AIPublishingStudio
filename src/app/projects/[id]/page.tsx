@@ -7,6 +7,8 @@ import { contentTypeIcon } from "@/lib/domain/content-types";
 import { OverviewPanel } from "@/features/projects/components/OverviewPanel";
 import { StatusSelect } from "@/features/projects/components/StatusSelect";
 import { AssetsPanel } from "@/features/assets/components/AssetsPanel";
+import { GeneratePanel } from "@/features/generation/components/GeneratePanel";
+import { getAiClient } from "@/lib/ai/client";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     include: {
       brand: { select: { id: true, name: true } },
       assets: { orderBy: { createdAt: "desc" } },
+      generatedAssets: { include: { versions: true }, orderBy: { createdAt: "desc" } },
       _count: { select: { assets: true, generatedAssets: true, checklistItems: true } },
     },
   });
@@ -33,9 +36,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       key: "generate",
       label: "Generate",
       badge: project._count.generatedAssets,
-      // Filled by module M4 (AI generation engine).
       content: (
-        <EmptyState icon="✨" title="AI generation arrives in module M4" description="Generate captions, descriptions, SEO, hashtags and more — all brand-aware." />
+        <GeneratePanel
+          projectId={project.id}
+          usingStub={getAiClient().usingStub}
+          generated={project.generatedAssets}
+        />
       ),
     },
     {
