@@ -1,0 +1,238 @@
+// AI Publishing Studio — data model.
+//
+// Design principles (see docs/ARCHITECTURE.md):
+//   * Everything revolves around a ContentProject.
+//   * ContentType and Platform are DATA, not code branches — the system is generic.
+//   * The Brand Profile is the single source of truth for every AI generation.
+//   * Versioning is built in from day one (AssetVersion) so editing never loses history.
+//
+// SQLite note: SQLite has no native arrays/enums. We model enums as String with app-level
+// unions, and list-like fields as JSON strings. This is isolated so a future move to
+// Postgres (arrays/enums) touches only the repository layer.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Brand — the source of truth. Every AI call inherits from here.
+// ---------------------------------------------------------------------------
+model Brand {
+  id          String @id @default(cuid())
+  name        String
+  slug        String @unique
+  description String?
+
+  // Audience & voice
+  targetAudience String?
+  ageGroup       String?
+  writingTone    String?
+  voiceStyle     String?
+  ctaStyle       String?
+
+  // Visual identity
+  colors         String? // JSON: string[] of hex values
+  fonts          String? // JSON: { heading, body }
+  logoUrl        String?
+  coverStyle     String?
+  thumbnailStyle String?
+  instagramStyle String?
+  youtubeStyle   String?
+
+  // Marketing defaults
+  preferredHashtags String? // JSON: string[]
+  preferredKeywords String? // JSON: string[]
+  emojiUsage        String? // "none" | "light" | "moderate" | "heavy"
+  introText         String?
+  outroText         String?
+  watermark         String?
+
+  // Links & attribution
+  socialLinks   String? // JSON: { instagram, youtube, facebook, pinterest, ... }
+  website       String?
+  defaultAuthor String?
+
+  projects        ContentProject[]
+  promptTemplates PromptTemplate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+// ---------------------------------------------------------------------------
+// ContentProject — a unit of publishing work.
+// ---------------------------------------------------------------------------
+model ContentProject {
+  id      String @id @default(cuid())
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  // ContentType as string union (see lib/domain/content-types.ts):
+  // storybook | coloring_book | activity_book | flash_cards | rhymes |
+  // bedtime_story | youtube_video | educational | printable | other
+  contentType String
+
+  // Metadata (Step 1 of the workflow)
+  title       String
+  subtitle    String?
+  topic       String?
+  ageGroup    String?
+  description String?
+  keywords    String? // JSON: string[]
+  language    String  @default("English")
+
+  // Lifecycle: draft | in_progress | completed | archived
+  status String @default("draft")
+
+  assets          Asset[]
+  generatedAssets GeneratedAsset[]
+  checklistItems  ChecklistItem[]
+  activityLogs    ActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brandId])
+  @@index([status])
+  @@index([contentType])
+}
+
+// ---------------------------------------------------------------------------
+// Asset — an uploaded source file (immutable input).
+// ---------------------------------------------------------------------------
+model Asset {
+  id        String         @id @default(cuid())
+  projectId String
+  project   ContentProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // kind: pdf | cover | preview_image | illustration | video | audio | source_text | other
+  kind        String
+  fileName    String
+  storagePath String // path resolved by the StorageProvider
+  mimeType    String?
+  sizeBytes   Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// ---------------------------------------------------------------------------
+// GeneratedAsset — an AI-produced output. Editable, versioned.
+// ---------------------------------------------------------------------------
+model GeneratedAsset {
+  id        String         @id @default(cuid())
+  projectId String
+  project   ContentProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // serviceKey ties back to the AiService registry, e.g. "instagram.caption".
+  serviceKey String
+  platform   String // instagram | youtube | kdp | gumroad | pinterest | facebook | blog | email
+  kind       String // caption | description | hashtags | seo_title | tags | ...
+  label      String
+
+  content String // current content (latest version, denormalized for fast reads)
+
+  // "draft" | "final"
+  status String @default("draft")
+
+  versions AssetVersion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([platform])
+  @@index([serviceKey])
+}
+
+// ---------------------------------------------------------------------------
+// AssetVersion — immutable snapshot of a GeneratedAsset's content.
+// ---------------------------------------------------------------------------
+model AssetVersion {
+  id               String         @id @default(cuid())
+  generatedAssetId String
+  generatedAsset   GeneratedAsset @relation(fields: [generatedAssetId], references: [id], onDelete: Cascade)
+
+  version Int
+  content String
+  // origin: "generated" | "edited"
+  origin  String @default("generated")
+  note    String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([generatedAssetId, version])
+  @@index([generatedAssetId])
+}
+
+// ---------------------------------------------------------------------------
+// ChecklistItem — a publishing task, auto-seeded per project.
+// ---------------------------------------------------------------------------
+model ChecklistItem {
+  id        String         @id @default(cuid())
+  projectId String
+  project   ContentProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  key      String // stable id e.g. "instagram_posted"
+  label    String
+  // grouping for the UI: production | instagram | youtube | gumroad | kdp | pinterest | marketing
+  category String
+  order    Int    @default(0)
+
+  done        Boolean   @default(false)
+  completedAt DateTime?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+// ---------------------------------------------------------------------------
+// PromptTemplate — reusable prompt with {{brand.*}} / {{project.*}} placeholders.
+// ---------------------------------------------------------------------------
+model PromptTemplate {
+  id      String  @id @default(cuid())
+  brandId String? // null = global/default template shared by all brands
+  brand   Brand?  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  serviceKey String // which AiService this template feeds
+  name       String
+  body       String // the template text with placeholders
+  isDefault  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([serviceKey])
+  @@index([brandId])
+}
+
+// ---------------------------------------------------------------------------
+// ActivityLog — append-only audit trail powering "Recent Activity".
+// ---------------------------------------------------------------------------
+model ActivityLog {
+  id        String          @id @default(cuid())
+  projectId String?
+  project   ContentProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // action: project_created | asset_uploaded | asset_generated | asset_edited |
+  //         checklist_completed | brand_created | ...
+  action  String
+  message String
+  meta    String? // JSON blob for extra context
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([createdAt])
+}
