@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
-import { ButtonLink, EmptyState } from "@/components/ui";
+import { ButtonLink } from "@/components/ui";
 import { Tabs } from "@/components/ui/Tabs";
 import { contentTypeIcon } from "@/lib/domain/content-types";
 import { OverviewPanel } from "@/features/projects/components/OverviewPanel";
 import { StatusSelect } from "@/features/projects/components/StatusSelect";
 import { AssetsPanel } from "@/features/assets/components/AssetsPanel";
 import { GeneratePanel } from "@/features/generation/components/GeneratePanel";
+import { ChecklistPanel } from "@/features/checklist/components/ChecklistPanel";
 import { getAiClient } from "@/lib/ai/client";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       brand: { select: { id: true, name: true } },
       assets: { orderBy: { createdAt: "desc" } },
       generatedAssets: { include: { versions: true }, orderBy: { createdAt: "desc" } },
+      checklistItems: { orderBy: { order: "asc" } },
       _count: { select: { assets: true, generatedAssets: true, checklistItems: true } },
     },
   });
@@ -48,10 +50,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       key: "checklist",
       label: "Checklist",
       badge: project._count.checklistItems,
-      // Filled by module M5 (publishing checklist).
-      content: (
-        <EmptyState icon="✅" title="Publishing checklist arrives in module M5" description="Track every publishing step with status, notes and timestamps." />
-      ),
+      content: <ChecklistPanel items={project.checklistItems} />,
     },
   ];
 
