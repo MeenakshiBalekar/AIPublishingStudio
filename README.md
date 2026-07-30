@@ -61,5 +61,5 @@ Built incrementally, one module at a time:
 - ✅ **M4** — AI generation engine (registry, prompt engine, versioning)
 - ✅ **M5** — Publishing checklist (auto-seeded, interactive)
 - ✅ **M6** — Dashboard (stats, activity, upcoming tasks, quick actions)
-- ⬜ M7 — Prompt Library (manage reusable prompt templates)
+- ✅ **M7** — Prompt Library (reusable, brand-aware prompt templates)
 - ⬜ Future — platform integrations, AI image/voice/video, analytics, scheduling
