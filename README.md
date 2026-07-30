@@ -55,10 +55,11 @@ build out the whole workflow before wiring real generation.
 Built incrementally, one module at a time:
 
 - ✅ **M0** — Foundation: scaffold, design system, data model, app shell
-- ⬜ M1 — Brand Profiles
-- ⬜ M2 — Content Projects
-- ⬜ M3 — Asset uploads & library
-- ⬜ M4 — AI generation engine
-- ⬜ M5 — Publishing checklist
-- ⬜ M6 — Dashboard
-- ⬜ M7 — Prompt Library
+- ✅ **M1** — Brand Profiles (source-of-truth CRUD)
+- ✅ **M2** — Content Projects (create, list, detail hub)
+- ✅ **M3** — Asset uploads & library (storage abstraction)
+- ✅ **M4** — AI generation engine (registry, prompt engine, versioning)
+- ✅ **M5** — Publishing checklist (auto-seeded, interactive)
+- ✅ **M6** — Dashboard (stats, activity, upcoming tasks, quick actions)
+- ⬜ M7 — Prompt Library (manage reusable prompt templates)
+- ⬜ Future — platform integrations, AI image/voice/video, analytics, scheduling
