@@ -6,6 +6,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { contentTypeIcon } from "@/lib/domain/content-types";
 import { OverviewPanel } from "@/features/projects/components/OverviewPanel";
 import { StatusSelect } from "@/features/projects/components/StatusSelect";
+import { AssetsPanel } from "@/features/assets/components/AssetsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     where: { id: params.id },
     include: {
       brand: { select: { id: true, name: true } },
+      assets: { orderBy: { createdAt: "desc" } },
       _count: { select: { assets: true, generatedAssets: true, checklistItems: true } },
     },
   });
@@ -25,10 +27,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       key: "assets",
       label: "Assets",
       badge: project._count.assets,
-      // Filled by module M3 (asset uploads & library).
-      content: (
-        <EmptyState icon="📎" title="Asset uploads arrive in module M3" description="Upload PDFs, covers, illustrations, audio and video here." />
-      ),
+      content: <AssetsPanel projectId={project.id} assets={project.assets} />,
     },
     {
       key: "generate",
