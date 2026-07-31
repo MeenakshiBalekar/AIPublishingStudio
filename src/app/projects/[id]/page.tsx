@@ -9,6 +9,7 @@ import { StatusSelect } from "@/features/projects/components/StatusSelect";
 import { AssetsPanel } from "@/features/assets/components/AssetsPanel";
 import { GeneratePanel } from "@/features/generation/components/GeneratePanel";
 import { ChecklistPanel } from "@/features/checklist/components/ChecklistPanel";
+import { PublishKitPanel } from "@/features/export/components/PublishKitPanel";
 import { getAiClient } from "@/lib/ai/client";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,22 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       label: "Checklist",
       badge: project._count.checklistItems,
       content: <ChecklistPanel items={project.checklistItems} />,
+    },
+    {
+      key: "kit",
+      label: "Publish Kit",
+      content: (
+        <PublishKitPanel
+          projectId={project.id}
+          assets={project.generatedAssets.map((a) => ({
+            id: a.id,
+            platform: a.platform,
+            label: a.label,
+            content: a.content,
+            status: a.status,
+          }))}
+        />
+      ),
     },
   ];
 
