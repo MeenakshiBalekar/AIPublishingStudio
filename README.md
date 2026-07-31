@@ -62,4 +62,6 @@ Built incrementally, one module at a time:
 - ✅ **M5** — Publishing checklist (auto-seeded, interactive)
 - ✅ **M6** — Dashboard (stats, activity, upcoming tasks, quick actions)
 - ✅ **M7** — Prompt Library (reusable, brand-aware prompt templates)
+- ✅ **M8** — Publish Kit & Export (bulk copy + Markdown/JSON download)
+- ✅ **M9** — Command palette & global search (⌘K)
 - ⬜ Future — platform integrations, AI image/voice/video, analytics, scheduling
